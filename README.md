@@ -2,7 +2,7 @@
 ## IoT Based Smart Crop Protection System for Agriculture
 
 
-The ***Assignment folder*** contains the assignment picture ,TinkerCad link submitted by the **team leader (Gunaseelan)** and the **team members** of ***KIT AND KIM TECHNICAL CAMPUS,KARAIKUDI***.
+The ***assignments folder*** contains the assignment picture ,TinkerCad link submitted by the **team leader (Gunaseelan)** and the **team members** of ***KIT AND KIM TECHNICAL CAMPUS,KARAIKUDI***.
 
 
 The ***Ideation Phase folder*** contains the picture and pdf of empathy map and problem statement.
