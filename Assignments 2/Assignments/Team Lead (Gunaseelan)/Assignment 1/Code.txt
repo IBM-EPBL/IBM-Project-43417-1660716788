@@ -1,0 +1,38 @@
+int t=2;
+int e=3;
+void setup()
+{
+  Serial.begin(6000);
+  pinMode(12,OUTPUT);
+  pinMode(4,INPUT);
+  pinMode(t,OUTPUT);
+  pinMode(e,INPUT);
+  pinMode(11,OUTPUT);
+  
+}
+
+void loop()
+{
+  double a=analogRead(A0);
+  double te=(((a/1024)*5)-0.5)*100;
+  if(te>100)
+    tone(12,125);
+  else
+    noTone(12);
+  digitalWrite(t,LOW);
+  digitalWrite(t,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(t,LOW);
+  float dur=pulseIn(e,HIGH);
+  float dis=(dur*0.0343)/2;
+    if(dis<130)
+    digitalWrite(11,HIGH);
+    else
+    digitalWrite(11,LOW);
+    
+  int p=digitalRead(4);
+  if(p)
+    tone(12,100);
+  else
+    noTone(12);
+}
