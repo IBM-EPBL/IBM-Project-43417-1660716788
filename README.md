@@ -7,5 +7,5 @@ The ***assignments folder*** contains the assignment picture ,TinkerCad link sub
 
 The ***Pre-Development Phase folder*** contains Ideation Phase, Project Design Phase-I and Project Design Phase-II folder .
 
-***Note*** We have uploaded the folder earlier and deleted to edit it according to the template and uploaded it.
+***Note:*** We have uploaded the folder earlier and **deleted to edit it** according to the template and **uploaded it again**.
  
