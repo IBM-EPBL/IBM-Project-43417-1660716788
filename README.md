@@ -2,7 +2,7 @@
 ## IoT Based Smart Crop Protection System for Agriculture
 
 
-The ***assignments folder*** contains the assignment picture ,TinkerCad link submitted by the **team leader (Gunaseelan)** and the **team members** of ***KIT AND KIM TECHNICAL CAMPUS,KARAIKUDI***.
+The ***assignments folder*** contains the assignments submitted by the **team leader (Gunaseelan)** and the **team members** of ***KIT AND KIM TECHNICAL CAMPUS,KARAIKUDI***.
 
 
 The ***Pre-Development Phase folder*** contains Ideation Phase, Project Design Phase-I and Project Design Phase-II folder .
