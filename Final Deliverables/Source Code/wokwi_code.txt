@@ -1,0 +1,317 @@
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+#include "DHTesp.h"
+#include "WiFi.h"//library for wifi
+#include "PubSubClient.h"//library for MQtt
+#include "HTTPClient.h"
+#include "Arduino_JSON.h"
+ 
+#define PIN_TRIG 27
+#define PIN_ECHO 26
+#define TFT_DC 2
+#define TFT_CS 15
+#define SOUND_SPEED 0.034
+
+const int DHT_PIN = 13;
+int pirpin = 12;
+int BUZZER_CHANNEL = 0;
+int ultrabuzzer=33;
+int temperaturepin=35;
+const float BETA = 3950;
+int pirState = LOW;
+String payload;
+  
+
+
+
+const String endpoint = "https://api.openweathermap.org/data/2.5/weather?lat=10.0695426&lon=78.7642444&appid=";
+const String key = "dff65ece7cd56e5609a961090c1815a5";
+
+DHTesp dhtSensor;
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+
+void callback(char* subscribetopic, byte* payload, unsigned int payloadLength); 
+
+#define ORG "o18g4e"//IBM ORGANITION ID
+#define DEVICE_TYPE "temp"//Device type mentioned in ibm watson IOT Platform
+#define DEVICE_ID "1234"//Device ID mentioned in ibm watson IOT Platform
+#define TOKEN "12345678"     //Token
+String data3;
+float h, t;
+
+char server[] = ORG ".messaging.internetofthings.ibmcloud.com";// Server Name
+char publishTopic[] = "iot-2/evt/event_1/fmt/json";// topic name and type of event perform and format in which data to be send
+char subscribetopic[] = "iot-2/cmd/command/fmt/String";// cmd  REPRESENT command type AND COMMAND IS TEST OF FORMAT STRING
+char authMethod[] = "use-token-auth";// authentication method
+char token[] = TOKEN;
+char clientId[] = "d:" ORG ":" DEVICE_TYPE ":" DEVICE_ID;//client id
+
+WiFiClient wifiClient; // creating the instance for wificlient
+PubSubClient client(server, 1883, callback ,wifiClient); //calling the predefined client id by passing parameter like server id,portand wificredential
+
+void setup() {
+  Serial.begin(9600);
+  dhtSensor.setup(DHT_PIN, DHTesp::DHT22);
+  tft.begin();
+  ledcSetup(BUZZER_CHANNEL, 8000, 12);
+  pinMode(PIN_TRIG, OUTPUT);
+  pinMode(PIN_ECHO, INPUT);
+  ledcAttachPin(ultrabuzzer, BUZZER_CHANNEL);
+  analogReadResolution(10);
+  pinMode(temperaturepin,INPUT);
+  wificonnect();
+  mqttconnect();
+}
+
+int value=0;
+void loop() {
+  HTTPClient http;
+    http.begin(endpoint + key); 
+    int httpCode = http.GET();  
+    if (httpCode > 0) { 
+        String payloadweather = http.getString();
+        Serial.println(httpCode);
+        Serial.println("Http Status Code: "+httpCode);
+        Serial.println(payloadweather);
+      JSONVar myObject = JSON.parse(payloadweather);
+
+      if (JSON.typeof(myObject) == "undefined") {
+        Serial.println("Parsing input failed!");
+        return;
+      }
+      Serial.print("Area: ");
+      Serial.println(myObject["name"]);
+      Serial.print("Weather_Details: ");
+      Serial.println(myObject["weather"]);
+    }
+      
+    else {
+      Serial.println("Error on HTTP request");
+    }
+ 
+    http.end(); //Free the resources
+
+  TempAndHumidity  data = dhtSensor.getTempAndHumidity();
+  float t=data.temperature;
+  float h=data.humidity;
+  payload = "{\"temperature\":";
+  payload += t;
+  payload += "," "\"Humid\":";
+  payload += h;
+  payload += ",";  
+  
+  if (!client.loop()) {
+    mqttconnect();
+  }
+  
+  
+  int state = digitalRead(pirpin); 
+  
+  if (state == HIGH) { 
+    if (pirState == LOW)            
+  {
+      tft.fillScreen(ILI9341_BLACK);
+      tft.setTextColor(ILI9341_RED);
+      tft.setTextSize(3);
+      tft.setCursor(0, 120);
+      tft.println("Motion Detected");
+      pirState = HIGH;
+      ledcWriteTone(BUZZER_CHANNEL,500);
+     payload += "\"PIR_Sensor\":";
+      payload +="\"Motion Detected\"";
+      payload += ",";
+    
+  }
+  }
+   else if (pirState == HIGH) {
+  
+      tft.fillScreen(ILI9341_BLACK);
+      tft.setTextColor(ILI9341_RED);
+      tft.setTextSize(3);
+      tft.setCursor(0, 120);
+      tft.println("Motion ended");
+      ledcWrite(BUZZER_CHANNEL, 0);
+      pirState = LOW;
+      payload += "\"PIR_Sensor\":";
+      payload +="\"Motion Ended\"";
+      payload += ",";
+  
+}
+else
+{
+payload += "\"PIR_Sensor\":";
+      payload +="\"No Motion Detected\"";
+      payload += ",";
+}
+  
+  digitalWrite(PIN_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(PIN_TRIG, LOW);
+  int duration = pulseIn(PIN_ECHO, HIGH);
+  int distance = duration * SOUND_SPEED/2;
+  delay(1000);
+  if(distance<100)
+  {
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(3);
+    tft.setCursor(1, 120);
+    tft.println("Motion Detected in 100 cm range");
+    ledcWriteTone(BUZZER_CHANNEL,300);
+    //ledcWriteNote(BUZZER_CHANNEL, (note_t)NOTE_G, 5);
+    payload += "\"Ultrasonic_Sensor\":";
+      payload += "\"Motion Detected in 100cm range\"";
+      payload += ",";
+      
+    
+      
+  }
+  else
+  { 
+    ledcWrite(BUZZER_CHANNEL, 0);
+    tft.fillScreen(ILI9341_BLACK);
+    payload += "\"Ultrasonic_Sensor\":";
+      payload += "\"No Motion Detected\"";
+      payload += ",";
+  }
+  int analogValue = analogRead(temperaturepin);
+  float celsius = 1 / (log(1 / (1023. / analogValue - 1)) / BETA + 1.0 / 298.15) - 273.15;
+  if(celsius>10 && celsius<=30)
+  {
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(3);
+    tft.setCursor(26, 120);
+    tft.print(celsius);
+    tft.print(" Celsius");
+    tft.setTextColor(ILI9341_GREEN);
+    tft.print(" Normal Rain");
+    payload += "\"Rain_Sensor\":";
+    payload += "\"Normal Rain\"";
+    payload += "}";
+  }
+  else if(celsius>30 && celsius<=50)
+  {
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(3);
+    tft.setCursor(26, 120);
+    tft.print(celsius);
+    tft.print(" Celsius"); 
+    tft.setTextColor(ILI9341_GREEN);
+    tft.print(" Drizzling");
+    payload += "\"Rain_Sensor\":";
+    payload += "\"Drizzling\"";
+    payload += "}";
+  }
+   else if(celsius<=10)
+  {
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(3);
+    tft.setCursor(26, 120);
+    tft.print(celsius);
+    tft.print(" Celsius"); 
+    tft.setTextColor(ILI9341_GREEN);
+    tft.print(" Heavy Rain");
+    payload += "\"Rain_Sensor\":";
+    payload += "\"Heavy Rain\"";
+    payload += "}";
+  }
+  else
+  {
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(3);
+    tft.setCursor(26, 120);
+    tft.print(celsius);
+    tft.print(" Celsius");
+    tft.setTextColor(ILI9341_GREEN);
+    tft.print(" No Rain");
+    payload += "\"Rain_Sensor\":";
+    payload += "\"No Rain\"";
+    payload += "}";
+  }
+  publish(payload);
+  //delay(100); 
+  }
+void mqttconnect() {
+  if (!client.connected()) {
+    Serial.print("Reconnecting client to ");
+    Serial.println(server);
+    while (!!!client.connect(clientId, authMethod, token)) {
+      Serial.print(".");
+      delay(500);
+    }
+      
+     initManagedDevice();
+     Serial.println();
+  }
+}
+void wificonnect() //function defination for wificonnect
+{
+  Serial.println();
+  Serial.print("Connecting to ");
+  WiFi.begin("Wokwi-GUEST", "", 6);//passing the wifi credentials to establish the connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+void initManagedDevice() {
+  if (client.subscribe(subscribetopic)) {
+    Serial.println((subscribetopic));
+    Serial.println("subscribe to cmd OK");
+  } else {
+    Serial.println("subscribe to cmd FAILED");
+  }
+}
+void callback(char* subscribetopic, byte* payload, unsigned int payloadLength) 
+{
+  Serial.print("callback invoked for topic: ");
+  Serial.println(subscribetopic);
+  for (int i = 0; i <= payloadLength; i++) {
+    data3 += (char)payload[i];
+    Serial.println("data: "+ data3); 
+  if(data3=="motoron")
+  {
+    Serial.println(data3);
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(3);
+    tft.setCursor(26, 120);
+    tft.println("Motor on by farmer");
+  }
+  else 
+  {
+    Serial.println(data3);
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(3);
+    tft.setCursor(26, 120);
+    tft.println("Motor off by farmer");
+  }
+data3="";  
+}
+  
+}
+void publish(String payload)
+{
+   
+mqttconnect();
+  Serial.print("Sending payload: ");
+  Serial.println(payload);
+  
+  if (client.publish(publishTopic, (char*) payload.c_str())) {
+    Serial.println("Publish ok");// if it sucessfully upload data on the cloud then it will print publish ok in Serial monitor or else it will print publish failed
+  } else {
+    Serial.println("Publish failed");
+    Serial.println(client.publish(publishTopic, (char*) payload.c_str()));
+  }
+  delay(10);
+}
