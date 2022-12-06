@@ -7,6 +7,9 @@ The ***assignments folder*** contains the assignments submitted by the **team le
 
 The ***Pre-Development Phase folder*** contains Ideation Phase, Project Design Phase-I and Project Design Phase-II folder .
 
+The ***Final Deliverables folder*** contains Project Report, Source Code and Demo Video.
+
+The ***Project Development Phase*** contains Sprint-1, Sprint-2, Sprint-3 and Sprint-4 source code, User Acceptance Testing and Performance Testing.
 
 ***Note:*** We have uploaded the folder earlier and **deleted to edit it** according to the template and **uploaded it again**.
  
